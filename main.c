@@ -8,6 +8,8 @@
 
 #ifdef OPT
 #define OUT_FILE "opt.txt"
+#elif HASH
+#define OUT_FILE "hash.txt"
 #else
 #define OUT_FILE "orig.txt"
 #endif
@@ -43,11 +45,21 @@ int main(int argc, char *argv[])
     }
 
     /* build the entry */
+#ifdef HASH
+    entry *pHead[SIZE], *e[SIZE];
+    for(int i=0; i<SIZE; i++) {
+        pHead[i] = (entry *) malloc(sizeof(entry));
+        printf("size of entry : %lu bytes\n", sizeof(entry));
+        e[i] = pHead[i];
+        e[i]->pNext = NULL;
+    }
+#else
     entry *pHead, *e;
     pHead = (entry *) malloc(sizeof(entry));
     printf("size of entry : %lu bytes\n", sizeof(entry));
     e = pHead;
     e->pNext = NULL;
+#endif
 
 #if defined(__GNUC__)
     __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
@@ -58,7 +70,11 @@ int main(int argc, char *argv[])
             i++;
         line[i - 1] = '\0';
         i = 0;
+#ifdef HASH
+        append(line, e);
+#else
         e = append(line, e);
+#endif
     }
     clock_gettime(CLOCK_REALTIME, &end);
     cpu_time1 = diff_in_second(start, end);
@@ -66,15 +82,29 @@ int main(int argc, char *argv[])
     /* close file as soon as possible */
     fclose(fp);
 
+#ifdef HASH
+    for(int i=0; i<SIZE; i++) {
+        e[i] = pHead[i];
+    }
+#else
     e = pHead;
+#endif
 
     /* the givn last name to find */
     char input[MAX_LAST_NAME_SIZE] = "zyxel";
+#ifdef HASH
+    for(int i=0; i<SIZE; i++) {
+        e[i] = pHead[i];
+    }
+#else
     e = pHead;
+#endif
+
 
     assert(findName(input, e) &&
            "Did you implement findName() in " IMPL "?");
     assert(0 == strcmp(findName(input, e)->lastName, "zyxel"));
+
 
 #if defined(__GNUC__)
     __builtin___clear_cache((char *) pHead, (char *) pHead + sizeof(entry));
@@ -92,8 +122,16 @@ int main(int argc, char *argv[])
     printf("execution time of append() : %lf sec\n", cpu_time1);
     printf("execution time of findName() : %lf sec\n", cpu_time2);
 
+#ifdef HASH
+    for(int i=0; i<SIZE; i++) {
+        if (e[i])
+            free_list(e[i]->pNext);
+        free(pHead[i]);
+    }
+
+#else
     if (pHead->pNext) free(pHead->pNext);
     free(pHead);
-
+#endif
     return 0;
 }
